@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -129,6 +129,10 @@ async def cleanup_file(filename: str):
         os.remove(filename)
     except:
         pass
+
+@app.get("/api/test")
+async def test():
+    return JSONResponse({"status": "ok", "message": "API работает"})
 
 # Для статических файлов
 app.mount("/", StaticFiles(directory="public", html=True), name="static") 
