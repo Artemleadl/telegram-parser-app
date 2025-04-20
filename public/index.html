@@ -4,49 +4,124 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Telegram Channel Parser</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            margin: 0;
-            padding: 16px;
-            background-color: var(--tg-theme-bg-color, #fff);
-            color: var(--tg-theme-text-color, #000);
-        }
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-            text-align: center;
-        }
-        .status {
-            margin-top: 16px;
-            padding: 12px;
-            border-radius: 8px;
-            background-color: var(--tg-theme-secondary-bg-color, #f5f5f5);
-        }
-    </style>
+    <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
     <div class="container">
-        <h1>Telegram Channel Parser</h1>
-        <div class="status" id="status">
-            Проверка подключения...
+        <div class="card">
+            <h1>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="logo">
+                    <path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm-3.11-8.83l.013-.007.87 2.87c.112.311.266.367.453.341.188-.025.287-.126.41-.244l1.188-1.148 2.55 1.888c.466.257.801.124.917-.432l1.657-7.822c.183-.728-.137-1.02-.702-.788l-9.733 3.76c-.664.266-.66.638-.12.803l2.497.78z" fill="currentColor"/>
+                </svg>
+                Telegram Parser
+            </h1>
+            <div class="form-group">
+                <label for="channelInput">Ссылка на канал</label>
+                <div class="input-wrapper">
+                    <input type="text" id="channelInput" placeholder="Например: @channel или t.me/channel" />
+                    <div class="input-hint">Введите ссылку на канал в формате @channel или t.me/channel</div>
+                </div>
+            </div>
+            <div class="options-group">
+                <div class="checkbox">
+                    <input type="checkbox" id="parseBio" checked>
+                    <label for="parseBio">
+                        <span class="checkbox-icon"></span>
+                        Парсить био пользователей
+                    </label>
+                </div>
+                <div class="checkbox">
+                    <input type="checkbox" id="parseUsername" checked>
+                    <label for="parseUsername">
+                        <span class="checkbox-icon"></span>
+                        Парсить username
+                    </label>
+                </div>
+            </div>
+            <button id="parseButton" onclick="startParsing()">
+                <span>Начать парсинг</span>
+                <div class="spinner" style="display: none;"></div>
+            </button>
+            <div id="alert" class="alert" style="display: none;"></div>
+            <div id="downloadContainer" style="display: none;">
+                <a href="#" id="downloadLink" class="download-link">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" fill="currentColor"/>
+                    </svg>
+                    Скачать результаты
+                </a>
+            </div>
         </div>
     </div>
 
     <script>
-        let tg = window.Telegram.WebApp;
-        tg.expand();
-        
-        // Проверка работы API
-        fetch('/api/test')
-            .then(response => response.json())
-            .then(data => {
-                document.getElementById('status').textContent = 'API подключено: ' + data.message;
-            })
-            .catch(error => {
-                document.getElementById('status').textContent = 'Ошибка подключения к API';
-            });
+        function showAlert(message, type) {
+            const alert = document.getElementById('alert');
+            alert.textContent = message;
+            alert.className = `alert alert-${type}`;
+            alert.style.display = 'flex';
+        }
+
+        function hideAlert() {
+            document.getElementById('alert').style.display = 'none';
+        }
+
+        function showSpinner() {
+            document.querySelector('.spinner').style.display = 'block';
+            document.getElementById('parseButton').disabled = true;
+        }
+
+        function hideSpinner() {
+            document.querySelector('.spinner').style.display = 'none';
+            document.getElementById('parseButton').disabled = false;
+        }
+
+        async function startParsing() {
+            const channelInput = document.getElementById('channelInput');
+            const parseBio = document.getElementById('parseBio').checked;
+            const parseUsername = document.getElementById('parseUsername').checked;
+            const channel = channelInput.value.trim();
+
+            if (!channel) {
+                showAlert('Пожалуйста, введите ссылку на канал', 'error');
+                return;
+            }
+
+            hideAlert();
+            showSpinner();
+
+            try {
+                const response = await fetch('/api/parse', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        channel: channel,
+                        parseBio: parseBio,
+                        parseUsername: parseUsername
+                    })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Произошла ошибка при парсинге');
+                }
+
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const downloadLink = document.getElementById('downloadLink');
+                downloadLink.href = url;
+                downloadLink.download = response.headers.get('content-disposition')?.split('filename=')[1] || 'participants.xlsx';
+                
+                document.getElementById('downloadContainer').style.display = 'block';
+                showAlert('Парсинг успешно завершен!', 'success');
+            } catch (error) {
+                showAlert(error.message, 'error');
+            } finally {
+                hideSpinner();
+            }
+        }
     </script>
 </body>
 </html> 
