@@ -132,7 +132,7 @@ async def cleanup_file(filename: str):
 
 @app.get("/api/test")
 async def test():
-    return JSONResponse({"status": "ok", "message": "API работает"})
+    return {"status": "ok"}
 
 # Для статических файлов
 app.mount("/", StaticFiles(directory="public", html=True), name="static") 
