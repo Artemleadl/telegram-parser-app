@@ -10,11 +10,16 @@ import logging
 
 app = FastAPI()
 
-# Монтируем статические файлы
-app.mount("/static", StaticFiles(directory="static"), name="static")
+# Убедимся, что путь к статическим файлам существует
+static_path = os.path.join(os.path.dirname(__file__), "static")
+templates_path = os.path.join(os.path.dirname(__file__), "templates")
+
+# Монтируем статические файлы, если директория существует
+if os.path.exists(static_path):
+    app.mount("/static", StaticFiles(directory=static_path), name="static")
 
 # Настраиваем шаблоны
-templates = Jinja2Templates(directory="templates")
+templates = Jinja2Templates(directory=templates_path)
 
 # Модель для запроса парсинга
 class ParseRequest(BaseModel):
