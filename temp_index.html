@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telegram Channel Parser</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 16px;
+            background-color: var(--tg-theme-bg-color, #fff);
+            color: var(--tg-theme-text-color, #000);
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .input-group {
+            margin: 16px 0;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--tg-theme-hint-color, #999);
+            border-radius: 8px;
+            background-color: var(--tg-theme-secondary-bg-color, #f5f5f5);
+            color: var(--tg-theme-text-color, #000);
+            margin-bottom: 8px;
+        }
+        .button {
+            background-color: var(--tg-theme-button-color, #2481cc);
+            color: var(--tg-theme-button-text-color, #fff);
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 16px;
+        }
+        .status {
+            margin-top: 16px;
+            padding: 12px;
+            border-radius: 8px;
+            background-color: var(--tg-theme-secondary-bg-color, #f5f5f5);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Парсер Telegram каналов</h1>
+        <div class="input-group">
+            <input type="text" id="channelInput" placeholder="Введите ссылку на канал (например, @channel или t.me/channel)" />
+        </div>
+        <button class="button" onclick="startParsing()">Начать парсинг</button>
+        <div class="status" id="status"></div>
+    </div>
+
+    <script>
+        let tg = window.Telegram.WebApp;
+        tg.expand();
+        
+        function startParsing() {
+            const channelInput = document.getElementById('channelInput');
+            const statusDiv = document.getElementById('status');
+            const channel = channelInput.value.trim();
+            
+            if (!channel) {
+                statusDiv.textContent = 'Пожалуйста, введите ссылку на канал';
+                return;
+            }
+
+            statusDiv.textContent = 'Начинаем парсинг...';
+            
+            fetch('/api/parse', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    channel: channel,
+                    parse_bio: true,
+                    parse_username: true
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    statusDiv.textContent = `Успешно! Найдено пользователей: ${data.users_count}`;
+                    // Можно добавить кнопку для скачивания файла
+                    if (data.file_url) {
+                        const downloadButton = document.createElement('button');
+                        downloadButton.className = 'button';
+                        downloadButton.style.marginTop = '16px';
+                        downloadButton.textContent = 'Скачать результаты';
+                        downloadButton.onclick = () => window.open(data.file_url);
+                        statusDiv.appendChild(downloadButton);
+                    }
+                } else {
+                    statusDiv.textContent = 'Ошибка: ' + (data.message || 'Неизвестная ошибка');
+                }
+            })
+            .catch(error => {
+                statusDiv.textContent = 'Ошибка при выполнении запроса';
+                console.error('Error:', error);
+            });
+        }
+
+        // Инициализация при загрузке
+        document.getElementById('status').textContent = 'Готов к работе';
+    </script>
+</body>
+</html> 

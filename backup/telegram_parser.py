@@ -10,8 +10,8 @@ import logging
 import time
 
 # Telegram API credentials
-API_ID = '24185391'
-API_HASH = '9c4e8e4e1a2e7e2f0d5e8e4e1a2e7e2f'
+API_ID = '28355456'
+API_HASH = '5abc8c86bf772fe864987b761289d974'
 
 # Загрузка переменных окружения
 load_dotenv()
