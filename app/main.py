@@ -4,17 +4,17 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 import os
-from telegram_parser import TelegramParser
+from .telegram_parser import TelegramParser
 import asyncio
 import logging
 
 app = FastAPI()
 
 # Монтируем статические файлы
-app.mount("/static", StaticFiles(directory="app/static"), name="static")
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Настраиваем шаблоны
-templates = Jinja2Templates(directory="app/templates")
+templates = Jinja2Templates(directory="templates")
 
 # Модель для запроса парсинга
 class ParseRequest(BaseModel):
