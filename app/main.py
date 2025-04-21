@@ -2,13 +2,24 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import os
 from .telegram_parser import TelegramParser
 import asyncio
 import logging
+import tempfile
 
 app = FastAPI()
+
+# Добавляем CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Убедимся, что путь к статическим файлам существует
 static_path = os.path.join(os.path.dirname(__file__), "static")
@@ -35,6 +46,7 @@ async def home(request: Request):
 # API эндпоинт для парсинга
 @app.post("/api/parse")
 async def parse_channel(request: ParseRequest):
+    parser = None
     try:
         parser = TelegramParser(
             parse_bio=request.parse_bio,
@@ -46,15 +58,29 @@ async def parse_channel(request: ParseRequest):
         if result['success']:
             # Отправляем файл пользователю
             file_path = result['filename']
+            
+            # Создаем функцию для очистки после отправки файла
+            async def cleanup_after_response():
+                await asyncio.sleep(60)  # Ждем минуту после отправки
+                if parser:
+                    parser.cleanup()
+                    
+            # Запускаем очистку в фоновом режиме
+            asyncio.create_task(cleanup_after_response())
+            
             return FileResponse(
                 path=file_path,
                 filename=os.path.basename(file_path),
                 media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
             )
         else:
+            if parser:
+                parser.cleanup()
             raise HTTPException(status_code=400, detail=result.get('error', 'Unknown error'))
             
     except Exception as e:
+        if parser:
+            parser.cleanup()
         logging.error(f"Error during parsing: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
